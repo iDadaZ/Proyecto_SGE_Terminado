@@ -1,0 +1,11 @@
+<div class="container">
+  <h3 mat-dialog-title>De verdad quieres eliminar a {{alumno.nombre}}</h3>
+  <div mat-dialog-content>
+    Id: {{alumno.id}}
+    <p></p>
+    {{ALUMNADO}}: {{alumno.nombre}}
+    <p></p>
+  </div>
+  <button mat-button id="deleteAlumno" (click)="confirmDelete()">Eliminar {{ALUMNADO}}</button>
+  <button mat-button id="onNoClick" (click)="onNoClick()" tabindex="-1">Cancelar</button>
+</div>

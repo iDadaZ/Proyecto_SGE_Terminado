@@ -1,0 +1,69 @@
+<div class="container">
+  <h3 mat-dialog-title>Añadir {{UNIDAD_CENTRO_ALUMNO}}</h3>
+
+  <form class="mat-dialog-content" [formGroup]="alumnoForm">
+        <div class="form">
+          <mat-form-field color="accent">
+              <input matInput placeholder="id_unidad_centro" formControlName="id_unidad_centro" name="id_unidad_centro" maxlength="100" required>
+          </mat-form-field>
+        </div>
+
+        <!-- Como la id se autoGenera la puedo quitar de aquí
+
+        <div class="form">
+            <mat-form-field color="accent">
+                <input matInput placeholder="id" formControlName="id" name="id" maxlength="100" required>
+            </mat-form-field>
+        </div>
+
+        -->
+
+        <div class="form">
+          <mat-form-field color="accent">
+              <input matInput placeholder="nombre" formControlName="nombre" name="nombre" maxlength="100" required>
+          </mat-form-field>
+        </div>
+
+      <div class="form">
+        <mat-form-field color="accent">
+            <input matInput placeholder="apellidos" formControlName="apellidos" name="apellidos" maxlength="100" required>
+        </mat-form-field>
+      </div>
+
+      <div class="form">
+        <mat-form-field color="accent">
+            <input matInput placeholder="fecha_nacimiento" formControlName="fecha_nacimiento" name="fecha_nacimiento" maxlength="100" required>
+        </mat-form-field>
+      </div>
+
+      <div class="form">
+        <mat-form-field color="accent">
+            <input matInput placeholder="linkedin" formControlName="linkedin" name="linkedin" maxlength="100">
+        </mat-form-field>
+      </div>
+
+      <div class="form">
+        <mat-form-field color="accent">
+            <input matInput placeholder="nivel_ingles" formControlName="nivel_ingles" name="nivel_ingles" maxlength="100">
+        </mat-form-field>
+      </div>
+
+      <div class="form">
+        <mat-form-field color="accent">
+            <input matInput placeholder="minusvalia" formControlName="minusvalia" name="minusvalia" maxlength="100">
+        </mat-form-field>
+      </div>
+
+      <div class="form">
+        <mat-form-field color="accent">
+            <input matInput placeholder="otra_formacion" formControlName="otra_formacion" name="otra_formacion" maxlength="100">
+        </mat-form-field>
+      </div>
+
+      <div mat-dialog-actions>
+        <button mat-button id="onSubmit" type="submit" [disabled]="!alumnoForm.valid" (click)="confirmAdd()">Guardar</button>
+        <button mat-button id="onNoClick" (click)="onNoClick()" tabindex="-1">Cancelar</button>
+    </div>
+  </form>
+
+

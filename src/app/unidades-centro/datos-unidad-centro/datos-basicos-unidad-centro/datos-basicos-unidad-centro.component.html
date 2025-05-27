@@ -1,0 +1,31 @@
+<div class="container">
+  <h3 mat-dialog-title>Editar {{UNIDAD_CENTRO}}</h3>
+
+  <form class="mat-dialog-content" [formGroup]="datosBasicosUnidadCentroForm">
+
+      <div class="form">
+          <mat-form-field color="accent">
+              <input matInput placeholder="Unidad/Centro" formControlName="unidad_centro" name="unidad_centro" maxlength="100">
+          </mat-form-field>
+      </div>
+
+      <div class="form">
+          <mat-form-field color="accent">
+              <input matInput placeholder="Codigo" formControlName="id_unidad_centro" name="id_unidad_centro" maxlength="100">
+          </mat-form-field>
+      </div>
+
+      <div class="form">
+          <mat-form-field color="accent">
+              <input matInput placeholder="Nombre Centro" formControlName="nombre_centro" name="nombre_centro" maxlength="100">
+          </mat-form-field>
+      </div>
+
+      <div class="form">
+          <mat-form-field color="accent">
+              <textarea matInput placeholder="Observaciones" formControlName="observaciones" name="Observaciones"></textarea>
+          </mat-form-field>
+      </div>
+
+  </form>
+</div>

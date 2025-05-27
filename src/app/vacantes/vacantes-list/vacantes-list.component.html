@@ -1,0 +1,50 @@
+<h2>Listado de Vacantes</h2>
+
+<div *ngIf="vacantesPendientes.length > 0">
+  <h3>Vacantes Pendientes por Unidad:</h3>
+  <ul>
+    <li *ngFor="let pendiente of vacantesPendientes">
+      {{ pendiente.unidad }}: {{ pendiente.textoResumen }}
+    </li>
+  </ul>
+</div>
+
+<button mat-raised-button color="primary" (click)="crearNuevaVacante()">Crear Nueva Vacante</button>
+
+<table mat-table [dataSource]="vacantes" class="mat-elevation-z8">
+
+  <ng-container matColumnDef="entidad">
+    <th mat-header-cell *matHeaderCellDef> Entidad </th>
+    <td mat-cell *matCellDef="let row"> {{row.entidad}} </td>
+  </ng-container>
+
+  <ng-container matColumnDef="unidad">
+    <th mat-header-cell *matHeaderCellDef> Unidad </th>
+    <td mat-cell *matCellDef="let row"> {{row.unidad}} <span *ngIf="getPendientesResumen(row.unidad)">({{ getPendientesResumen(row.unidad) }})</span></td>
+  </ng-container>
+
+  <ng-container matColumnDef="numAlumnos">
+    <th mat-header-cell *matHeaderCellDef> Num. Alumnos </th>
+    <td mat-cell *matCellDef="let row"> {{row.numAlumnos}} </td>
+  </ng-container>
+
+  <ng-container matColumnDef="alumnos">
+    <th mat-header-cell *matHeaderCellDef> Listado Alumnos </th>
+    <td mat-cell *matCellDef="let row"> {{ mostrarAlumnos(row) }} </td>
+  </ng-container>
+
+  <ng-container matColumnDef="acciones">
+    <th mat-header-cell *matHeaderCellDef> Acciones </th>
+    <td mat-cell *matCellDef="let row">
+      <button mat-icon-button color="accent" (click)="editarVacante(row)">
+        <mat-icon>edit</mat-icon>
+      </button>
+      <button mat-icon-button color="warn" (click)="eliminarVacante(row)">
+        <mat-icon>delete</mat-icon>
+      </button>
+    </td>
+  </ng-container>
+
+  <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+  <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+</table>

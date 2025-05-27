@@ -1,0 +1,15 @@
+<mat-sidenav-container class="datos-unidad-centro-container">
+  <mat-sidenav mode="side" opened>
+    <mat-nav-list>
+      <mat-list-item mat-list-item (click)="navega('datos-basicos-unidad-centro')">Editar unidad centro</mat-list-item>
+      <mat-list-item mat-list-item (click)="navega('alumnos-unidad-centro', datosEditarUnidadCentro.id_unidad_centro)">Alumnado</mat-list-item>
+
+    </mat-nav-list>
+    <button mat-button class="save" (click)="save()">Guardar</button>
+    <button mat-button class="onNoClick" (click)="onNoClick()">Cancelar</button>
+  </mat-sidenav>
+
+  <mat-sidenav-content>
+    <router-outlet name="sidebar"></router-outlet>
+  </mat-sidenav-content>
+</mat-sidenav-container>

@@ -1,0 +1,62 @@
+<h2 mat-dialog-title>{{ isEditMode ? 'Editar Vacante' : 'Crear Nueva Vacante' }}</h2>
+<mat-dialog-content>
+  <form [formGroup]="vacanteForm">
+    <mat-form-field appearance="outline">
+      <mat-label>Entidad</mat-label>
+      <input matInput formControlName="entidad" required>
+      <mat-error *ngIf="vacanteForm.get('entidad')?.hasError('required')">La entidad es requerida</mat-error>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Unidad</mat-label>
+      <input matInput formControlName="unidad" required>
+      <mat-error *ngIf="vacanteForm.get('unidad')?.hasError('required')">La unidad es requerida</mat-error>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Número de Alumnos</mat-label>
+      <input matInput type="number" formControlName="numAlumnos" required min="1">
+      <mat-error *ngIf="vacanteForm.get('numAlumnos')?.hasError('required')">El número de alumnos es requerido</mat-error>
+      <mat-error *ngIf="vacanteForm.get('numAlumnos')?.hasError('min')">Debe ser al menos 1</mat-error>
+    </mat-form-field>
+
+    <div *ngIf="isEditMode && vacanteId" class="alumnos-management-section">
+      <mat-divider></mat-divider>
+      <h3>Gestión de Alumnos Asignados</h3>
+
+      <div class="add-alumno-section">
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Añadir Alumno</mat-label>
+          <mat-select [(ngModel)]="alumnoSeleccionadoId" [ngModelOptions]="{standalone: true}">
+            <mat-option>-- Seleccione un alumno --</mat-option>
+            <mat-option *ngFor="let alumno of alumnosDisponiblesParaAsignar" [value]="alumno.id">
+              {{ alumno.nombre }} {{ alumno.apellidos }}
+            </mat-option>
+          </mat-select>
+        </mat-form-field>
+        <button mat-raised-button color="primary" (click)="addAlumno()" [disabled]="!alumnoSeleccionadoId">
+          <mat-icon>person_add</mat-icon> Añadir
+        </button>
+      </div>
+
+      <h4 *ngIf="alumnosAsignados.length > 0">Alumnos actualmente asignados:</h4>
+      <p *ngIf="alumnosAsignados.length === 0">No hay alumnos asignados a esta vacante.</p>
+
+      <mat-list *ngIf="alumnosAsignados.length > 0">
+        <mat-list-item *ngFor="let alumno of alumnosAsignados">
+          <mat-icon matListItemIcon>person</mat-icon>
+          <div matListItemTitle>{{ alumno.nombre }} {{ alumno.apellidos }}</div>
+          <button mat-icon-button (click)="removeAlumno(alumno)" color="warn" matTooltip="Eliminar alumno de la vacante">
+            <mat-icon>delete</mat-icon>
+          </button>
+        </mat-list-item>
+      </mat-list>
+    </div>
+    </form>
+</mat-dialog-content>
+<mat-dialog-actions align="end">
+  <button mat-button (click)="onCancel()">Cancelar</button>
+  <button mat-raised-button color="primary" [disabled]="!vacanteForm.valid" (click)="onSubmit()">
+    {{ isEditMode ? 'Guardar Cambios' : 'Crear Vacante' }}
+  </button>
+</mat-dialog-actions>
