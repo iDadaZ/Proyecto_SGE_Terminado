@@ -1,12 +1,13 @@
-// src/app/vacantes/vacante-form/vacante-form.component.ts
 import { Component, OnInit, Inject } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
-import { VacantesService } from '../../services/vacantes.service'; // Tu servicio
+import { VacantesService } from '../../services/vacantes.service';
+import { EntidadesService } from '../../services/entidades.service'; // <--- NUEVA IMPORTACIÓN
 import { Vacante } from '../../shared/interfaces/vacante';
 import { Alumnado } from '../../shared/interfaces/alumnado';
+import { Entidad } from '../../shared/interfaces/entidad'; // <--- NUEVA IMPORTACIÓN
 import { MatSnackBar } from '@angular/material/snack-bar';
-// import { MatTableDataSource } from '@angular/material/table'; // No es necesario si no usas MatTable
+import { finalize } from 'rxjs/operators'; // <--- NUEVA IMPORTACIÓN para el indicador de carga
 
 @Component({
   selector: 'app-vacante-form',
@@ -16,56 +17,84 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 export class VacanteFormComponent implements OnInit {
 
   vacanteForm: FormGroup;
-  alumnosAsignados: Alumnado[] = []; // Alumnos actualmente en esta vacante
-  alumnosDisponiblesParaAsignar: Alumnado[] = []; // Alumnos que aún no están asignados a esta vacante
-  allAlumnosFromApi: Alumnado[] = []; // Todos los alumnos obtenidos de alumnos_disponibles.php
+  alumnosAsignados: Alumnado[] = [];
+  alumnosDisponiblesParaAsignar: Alumnado[] = [];
+  allAlumnosFromApi: Alumnado[] = [];
+
+  entidades: Entidad[] = []; // <--- NUEVA PROPIEDAD: Lista para almacenar las entidades disponibles
+  isLoadingEntidades: boolean = false; // <--- NUEVA PROPIEDAD: Indicador de carga para entidades
 
   isEditMode: boolean = false;
   vacanteId?: number;
-  alumnoSeleccionadoId?: number; // **Importante: Usaremos 'number' para el ID seleccionado en el UI**
+  alumnoSeleccionadoId?: number;
 
   constructor(
     private fb: FormBuilder,
-    private vacantesService: VacantesService, // Tu servicio inyectado
+    private vacantesService: VacantesService,
+    private entidadesService: EntidadesService, // <--- INYECCIÓN DEL SERVICIO DE ENTIDADES
     public dialogRef: MatDialogRef<VacanteFormComponent>,
     @Inject(MAT_DIALOG_DATA) public data: { vacante?: Vacante },
     private snackBar: MatSnackBar
   ) {
     this.vacanteForm = this.fb.group({
-      entidad: ['', Validators.required],
+      id_entidad: [null, Validators.required], // <--- CAMBIADO: Ahora es id_entidad y es numérico
       unidad: ['', Validators.required],
       numAlumnos: [null, [Validators.required, Validators.min(1)]],
     });
   }
 
   ngOnInit(): void {
+    this.loadEntidades(); // <--- NUEVA LLAMADA: Carga las entidades al iniciar el componente
+
     if (this.data && this.data.vacante) {
       this.isEditMode = true;
       this.vacanteId = this.data.vacante.id_vacante;
-      this.vacanteForm.patchValue(this.data.vacante);
+      // PatchValue usa los nombres de los controles del formulario.
+      // Ahora el campo del formulario es 'id_entidad'.
+      this.vacanteForm.patchValue({
+        id_entidad: this.data.vacante.id_entidad, // Asigna el ID de la entidad
+        unidad: this.data.vacante.unidad,
+        numAlumnos: this.data.vacante.num_alumnos
+      });
 
       if (this.vacanteId) {
         this.loadAlumnosAsignados(this.vacanteId);
-        this.loadAlumnosDisponiblesApi(this.vacanteId); // Cargar todos y luego filtrar
+        this.loadAlumnosDisponiblesApi(this.vacanteId);
       }
-    } else {
-      // Si estamos creando una nueva vacante, la sección de alumnos no será visible
-      // hasta que la vacante sea creada y se entre en modo edición.
     }
   }
 
-  // Carga los alumnos ya asignados a la vacante actual usando tu método `getAlumnosVacante`
-  loadAlumnosAsignados(idVacante: number): void {
-    this.vacantesService.getAlumnosVacante(idVacante).subscribe( // Usamos tu método getAlumnosVacante
+  // <--- NUEVO MÉTODO: Cargar entidades desde el servicio de entidades
+  loadEntidades(): void {
+    this.isLoadingEntidades = true; // Iniciar el indicador de carga
+    this.entidadesService.get().pipe( // Llama al método get() de tu EntidadesService
+      finalize(() => this.isLoadingEntidades = false) // Detener el indicador al finalizar
+    ).subscribe(
       (response) => {
         if (response.ok && response.data) {
-          // **MAPEO NECESARIO**: Tu PHP devuelve `id_alumno` (string), nuestra interfaz espera `id` (number)
+          this.entidades = response.data; // Asigna los datos de las entidades
+        } else {
+          this.snackBar.open(`Error al cargar entidades: ${response.message}`, 'Cerrar', { duration: 3000 });
+        }
+      },
+      (error) => {
+        this.snackBar.open('Error al conectar con el servidor para cargar entidades', 'Cerrar', { duration: 3000 });
+        console.error('Error cargando entidades:', error);
+      }
+    );
+  }
+
+  // Carga los alumnos ya asignados a la vacante actual
+  loadAlumnosAsignados(idVacante: number): void {
+    this.vacantesService.getAlumnosVacante(idVacante).subscribe(
+      (response) => {
+        if (response.ok && response.data) {
           this.alumnosAsignados = response.data.map((alumnoApi: any) => ({
-            id: Number(alumnoApi.id_alumno), // Convertir a number y asignar a 'id'
+            id: Number(alumnoApi.id_alumno),
             nombre: alumnoApi.nombre,
             apellidos: alumnoApi.apellidos
           })) as Alumnado[];
-          this.filterAvailableAlumnos(); // Vuelve a filtrar los disponibles después de cargar asignados
+          this.filterAvailableAlumnos();
         } else {
           this.alumnosAsignados = [];
           this.snackBar.open(`Error al cargar alumnos asignados: ${response.message}`, 'Cerrar', { duration: 3000 });
@@ -81,17 +110,15 @@ export class VacanteFormComponent implements OnInit {
 
   // Carga todos los alumnos del sistema desde alumnos_disponibles.php
   loadAlumnosDisponiblesApi(idVacante?: number): void {
-    this.vacantesService.getAlumnosDisponibles(idVacante).subscribe( // Usamos tu método getAlumnosDisponibles
+    this.vacantesService.getAlumnosDisponibles(idVacante).subscribe(
       (response) => {
         if (response.ok && response.data) {
-          // Asume que alumnos_disponibles.php devuelve 'id', 'nombre', 'apellidos'
-          // Si el ID de alumnos_disponibles.php es string, también necesitarás Number() aquí
           this.allAlumnosFromApi = response.data.map((alumnoApi: any) => ({
-            id: Number(alumnoApi.id), // Asegúrate de que 'id' de la API se convierte a number
+            id: Number(alumnoApi.id),
             nombre: alumnoApi.nombre,
             apellidos: alumnoApi.apellidos
           })) as Alumnado[];
-          this.filterAvailableAlumnos(); // Filtra los que ya están asignados
+          this.filterAvailableAlumnos();
         } else {
           this.allAlumnosFromApi = [];
           this.snackBar.open(`Error al cargar alumnos disponibles: ${response.message}`, 'Cerrar', { duration: 3000 });
@@ -117,14 +144,12 @@ export class VacanteFormComponent implements OnInit {
   // Añade el alumno seleccionado a la vacante
   addAlumno(): void {
     if (this.alumnoSeleccionadoId && this.vacanteId) {
-      // **IMPORTANTE**: Convertimos el ID a string antes de enviarlo al servicio
-      // porque tu servicio espera `idAlumno: string`.
       this.vacantesService.addAlumnoVacante(this.vacanteId, String(this.alumnoSeleccionadoId)).subscribe(
         (response) => {
           if (response.ok) {
             this.snackBar.open('Alumno añadido correctamente', 'Cerrar', { duration: 3000 });
-            this.reloadAlumnosLists(); // Recargar ambas listas
-            this.alumnoSeleccionadoId = undefined; // Resetear el select
+            this.reloadAlumnosLists();
+            this.alumnoSeleccionadoId = undefined;
           } else {
             this.snackBar.open(`Error al añadir alumno: ${response.message}`, 'Cerrar', { duration: 3000 });
           }
@@ -140,13 +165,11 @@ export class VacanteFormComponent implements OnInit {
   // Elimina un alumno de la vacante
   removeAlumno(alumno: Alumnado): void {
     if (this.vacanteId && alumno.id) {
-      // **IMPORTANTE**: Convertimos el ID a string antes de enviarlo al servicio
-      // porque tu servicio espera `idAlumno: string`.
       this.vacantesService.removeAlumnoVacante(this.vacanteId, String(alumno.id)).subscribe(
         (response) => {
           if (response.ok) {
             this.snackBar.open('Alumno eliminado correctamente', 'Cerrar', { duration: 3000 });
-            this.reloadAlumnosLists(); // Recargar ambas listas
+            this.reloadAlumnosLists();
           } else {
             this.snackBar.open(`Error al eliminar alumno: ${response.message}`, 'Cerrar', { duration: 3000 });
           }
@@ -167,9 +190,10 @@ export class VacanteFormComponent implements OnInit {
     }
   }
 
-  // --- Métodos de formulario principales (ya los tenías) ---
+  // --- Métodos de formulario principales ---
   onSubmit(): void {
     if (this.vacanteForm.valid) {
+      // Los datos del formulario ya incluyen 'id_entidad' como número
       const vacanteData: Vacante = this.vacanteForm.value;
       if (this.isEditMode && this.vacanteId) {
         vacanteData.id_vacante = this.vacanteId;
@@ -199,9 +223,6 @@ export class VacanteFormComponent implements OnInit {
   handleFormResponse(response: any, successMessage: string): void {
     if (response && response.ok) {
       this.snackBar.open(successMessage, 'Cerrar', { duration: 3000 });
-      // Si se crea una nueva vacante con éxito, podemos cerrar el diálogo.
-      // Si el backend devuelve el ID de la nueva vacante, podríamos considerar
-      // pasar a modo edición para esa vacante, pero por ahora solo cerramos.
       this.dialogRef.close({ ok: true, data: response.data });
     } else if (response && response.message) {
       this.snackBar.open(`Error: ${response.message}`, 'Cerrar', { duration: 3000 });
