@@ -7,5 +7,5 @@ export interface Alumnado {
   nivel_ingles:'A1' | 'A2' | 'B1' | 'B2' | 'C1' | 'C2';
   minusvalia: number;
   otra_formacion?: String;
-  idUnidadCentro: number;
+  id_unidad_centro: number;
 }

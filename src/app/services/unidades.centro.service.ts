@@ -67,7 +67,7 @@ export class UnidadesCentroService {
  this.alumnoSeleccionado.nivel_ingles = formUnidadCentro.nivel_ingles;
  this.alumnoSeleccionado.minusvalia = formUnidadCentro.minusvalia;
  this.alumnoSeleccionado.otra_formacion = formUnidadCentro.otra_formacion;
- this.alumnoSeleccionado.idUnidadCentro = formUnidadCentro.id_unidad_centro;
+ this.alumnoSeleccionado.id_unidad_centro = formUnidadCentro.id_unidad_centro;
  }
 
 }

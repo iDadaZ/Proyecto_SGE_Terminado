@@ -32,7 +32,7 @@ export class AlumnadoService {
 
   getAlumnadoUnidadCentro(unidadCentro : any) {
     console.log("unidadCentro enviado:", unidadCentro);
-    return this.http.get<ApiResponse>(`${URL_API}/${ENDPOINT}.php?unidadCentro=${unidadCentro}`, { headers: this.CommonService.headers });
+    return this.http.get<ApiResponse>(`${URL_API}/${ENDPOINT}.php?id_unidad_centro=${unidadCentro}`, { headers: this.CommonService.headers });
   }
 
   // **Nuevo método para obtener la lista de alumnos**

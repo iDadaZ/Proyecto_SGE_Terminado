@@ -1,75 +1,95 @@
-import { Component, OnInit, Inject } from '@angular/core';
+import { Component, OnInit, Inject, OnDestroy } from '@angular/core'; // Importar OnDestroy
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
 import { VacantesService } from '../../services/vacantes.service';
 import { EntidadesService } from '../../services/entidades.service';
 import { UnidadesCentroService } from 'src/app/services/unidades.centro.service';
+import { AlumnadoService } from 'src/app/services/alumnado.service'; // Importar AlumnadoService
 import { Vacante } from '../../shared/interfaces/vacante';
 import { Alumnado } from '../../shared/interfaces/alumnado';
 import { Entidad } from '../../shared/interfaces/entidad';
-import { UnidadCentro } from '../../shared/interfaces/unidades-centro'; // <-- Importación de la interfaz de Unidad de Centro
+import { UnidadCentro } from '../../shared/interfaces/unidades-centro';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { finalize } from 'rxjs/operators';
+import { Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-vacante-form',
   templateUrl: './vacante-form.component.html',
   styleUrls: ['./vacante-form.component.scss']
 })
-export class VacanteFormComponent implements OnInit {
+export class VacanteFormComponent implements OnInit, OnDestroy {
 
   vacanteForm: FormGroup;
   alumnosAsignados: Alumnado[] = [];
   alumnosDisponiblesParaAsignar: Alumnado[] = [];
-  allAlumnosFromApi: Alumnado[] = [];
+  allAlumnosFromApi: Alumnado[] = []; // Se usará para guardar todos los alumnos disponibles desde la API (del filtro por unidad)
 
   entidades: Entidad[] = [];
   isLoadingEntidades: boolean = false;
 
-  unidadesCentro: UnidadCentro[] = []; // <-- Propiedad para almacenar las unidades de centro
-  isLoadingUnidadesCentro: boolean = false; // <-- Indicador de carga para unidades de centro
+  unidadesCentro: UnidadCentro[] = [];
+  isLoadingUnidadesCentro: boolean = false;
 
   isEditMode: boolean = false;
   vacanteId?: number;
   alumnoSeleccionadoId?: number;
 
+  private formSubscription: Subscription = new Subscription();
+
   constructor(
     private fb: FormBuilder,
     private vacantesService: VacantesService,
     private entidadesService: EntidadesService,
-    private unidadesCentroService: UnidadesCentroService, // <-- Inyección del servicio de Unidades de Centro
+    private unidadesCentroService: UnidadesCentroService,
+    private alumnadoService: AlumnadoService,
     public dialogRef: MatDialogRef<VacanteFormComponent>,
     @Inject(MAT_DIALOG_DATA) public data: { vacante?: Vacante },
     private snackBar: MatSnackBar
   ) {
     this.vacanteForm = this.fb.group({
       id_entidad: [null, Validators.required],
-      // ELIMINADO: 'unidad'
-      id_unidad_centro: [null, Validators.required], // <-- NUEVO CAMPO: id_unidad_centro
+      id_unidad_centro: [null, Validators.required],
       num_alumnos: [null, [Validators.required, Validators.min(1)]],
     });
   }
 
   ngOnInit(): void {
     this.loadEntidades();
-    this.loadUnidadesCentro(); // <-- Carga las unidades de centro al iniciar el componente
+    this.loadUnidadesCentro();
 
     if (this.data && this.data.vacante) {
       this.isEditMode = true;
       this.vacanteId = this.data.vacante.id_vacante;
-      // PatchValue usa los nombres de los controles del formulario.
       this.vacanteForm.patchValue({
         id_entidad: this.data.vacante.id_entidad,
-        // ELIMINADO: unidad: this.data.vacante.unidad,
-        id_unidad_centro: this.data.vacante.id_unidad_centro, // <-- Asigna el ID de la unidad de centro
-        num_alumnos: this.data.vacante.num_alumnos // El backend devuelve num_alumnos, el formulario usa num_alumnos
+        id_unidad_centro: this.data.vacante.id_unidad_centro,
+        num_alumnos: this.data.vacante.num_alumnos
       });
 
       if (this.vacanteId) {
         this.loadAlumnosAsignados(this.vacanteId);
-        this.loadAlumnosDisponiblesApi(this.vacanteId);
+        // Si estamos en modo edición y ya hay una unidad de centro, cargar alumnos disponibles para esa unidad
+        if (this.data.vacante.id_unidad_centro) {
+          this.loadAlumnosDisponiblesApi(this.data.vacante.id_unidad_centro);
+        }
       }
     }
+
+    this.formSubscription.add(
+      this.vacanteForm.get('id_unidad_centro')?.valueChanges.subscribe(idUnidadCentro => {
+        if (idUnidadCentro) {
+          this.loadAlumnosDisponiblesApi(idUnidadCentro);
+        } else {
+          this.alumnosDisponiblesParaAsignar = [];
+          this.allAlumnosFromApi = [];
+        }
+      })
+    );
+  }
+
+  ngOnDestroy(): void {
+    this.formSubscription.unsubscribe();
   }
 
   loadEntidades(): void {
@@ -91,15 +111,14 @@ export class VacanteFormComponent implements OnInit {
     );
   }
 
-  // MÉTODO MODIFICADO: Cargar unidades de centro usando .get()
   loadUnidadesCentro(): void {
     this.isLoadingUnidadesCentro = true;
-    this.unidadesCentroService.get().pipe( // <-- Llamada a .get()
+    this.unidadesCentroService.get().pipe(
       finalize(() => this.isLoadingUnidadesCentro = false)
     ).subscribe(
       (response) => {
         if (response.ok && response.data) {
-          this.unidadesCentro = response.data as UnidadCentro[]; // Castear a UnidadCentro[]
+          this.unidadesCentro = response.data as UnidadCentro[];
         } else {
           this.snackBar.open(`Error al cargar unidades de centro: ${response.message}`, 'Cerrar', { duration: 3000 });
         }
@@ -116,53 +135,64 @@ export class VacanteFormComponent implements OnInit {
       (response) => {
         if (response.ok && response.data) {
           this.alumnosAsignados = response.data.map((alumnoApi: any) => ({
-            id: Number(alumnoApi.id_alumno),
+            id: String(alumnoApi.id_alumno),
             nombre: alumnoApi.nombre,
-            apellidos: alumnoApi.apellidos
+            apellidos: alumnoApi.apellidos,
+            id_unidad_centro: Number(alumnoApi.id_unidad_centro)
           })) as Alumnado[];
           this.filterAvailableAlumnos();
         } else {
           this.alumnosAsignados = [];
           this.snackBar.open(`Error al cargar alumnos asignados: ${response.message}`, 'Cerrar', { duration: 3000 });
+          this.filterAvailableAlumnos();
         }
       },
       (error) => {
         this.alumnosAsignados = [];
         this.snackBar.open('Error al conectar con el servidor cargando asignados', 'Cerrar', { duration: 3000 });
         console.error('Error cargando alumnos asignados:', error);
+        this.filterAvailableAlumnos();
       }
     );
   }
 
-  loadAlumnosDisponiblesApi(idVacante?: number): void {
-    this.vacantesService.getAlumnosDisponibles(idVacante).subscribe(
+  loadAlumnosDisponiblesApi(idUnidadCentro: number): void {
+    if (!idUnidadCentro) {
+      this.alumnosDisponiblesParaAsignar = [];
+      this.allAlumnosFromApi = [];
+      return;
+    }
+
+    this.alumnadoService.getAlumnadoUnidadCentro(idUnidadCentro).subscribe(
       (response) => {
         if (response.ok && response.data) {
           this.allAlumnosFromApi = response.data.map((alumnoApi: any) => ({
-            id: Number(alumnoApi.id),
+            id: String(alumnoApi.id),
             nombre: alumnoApi.nombre,
-            apellidos: alumnoApi.apellidos
+            apellidos: alumnoApi.apellidos,
+            id_unidad_centro: Number(alumnoApi.id_unidad_centro)
           })) as Alumnado[];
           this.filterAvailableAlumnos();
         } else {
           this.allAlumnosFromApi = [];
           this.snackBar.open(`Error al cargar alumnos disponibles: ${response.message}`, 'Cerrar', { duration: 3000 });
+          this.filterAvailableAlumnos();
         }
       },
       (error) => {
         this.allAlumnosFromApi = [];
         this.snackBar.open('Error al conectar con el servidor cargando disponibles', 'Cerrar', { duration: 3000 });
         console.error('Error cargando alumnos disponibles:', error);
+        this.filterAvailableAlumnos();
       }
     );
   }
 
   filterAvailableAlumnos(): void {
-    if (this.allAlumnosFromApi && this.alumnosAsignados) {
-      this.alumnosDisponiblesParaAsignar = this.allAlumnosFromApi.filter(
-        (alumno) => !this.alumnosAsignados.some((asignado) => asignado.id === alumno.id)
-      );
-    }
+    const assignedIds = new Set(this.alumnosAsignados.map(a => a.id));
+    this.alumnosDisponiblesParaAsignar = this.allAlumnosFromApi.filter(
+      (alumno) => !assignedIds.has(alumno.id)
+    );
   }
 
   addAlumno(): void {
@@ -182,12 +212,14 @@ export class VacanteFormComponent implements OnInit {
           console.error('Error al añadir alumno:', error);
         }
       );
+    } else {
+      this.snackBar.open('Por favor, selecciona un alumno y asegúrate de que la vacante esté en modo edición.', 'Cerrar', { duration: 3000 });
     }
   }
 
   removeAlumno(alumno: Alumnado): void {
     if (this.vacanteId && alumno.id) {
-      this.vacantesService.removeAlumnoVacante(this.vacanteId, String(alumno.id)).subscribe(
+      this.vacantesService.removeAlumnoVacante(this.vacanteId, alumno.id).subscribe(
         (response) => {
           if (response.ok) {
             this.snackBar.open('Alumno eliminado correctamente', 'Cerrar', { duration: 3000 });
@@ -207,7 +239,13 @@ export class VacanteFormComponent implements OnInit {
   private reloadAlumnosLists(): void {
     if (this.vacanteId) {
       this.loadAlumnosAsignados(this.vacanteId);
-      this.loadAlumnosDisponiblesApi(this.vacanteId);
+      const currentUnidadCentroId = this.vacanteForm.get('id_unidad_centro')?.value;
+      if (currentUnidadCentroId) {
+        this.loadAlumnosDisponiblesApi(currentUnidadCentroId);
+      } else {
+        this.alumnosDisponiblesParaAsignar = [];
+        this.allAlumnosFromApi = [];
+      }
     }
   }
 
@@ -219,8 +257,7 @@ export class VacanteFormComponent implements OnInit {
       const vacanteData: Vacante = {
         id_entidad: formValue.id_entidad,
         id_unidad_centro: formValue.id_unidad_centro,
-        num_alumnos: formValue.num_alumnos, // Mapeamos el nombre del campo del formulario
-        // Asegúrate de que id_vacante esté presente si es modo edición
+        num_alumnos: formValue.num_alumnos,
         ...(this.isEditMode && this.vacanteId && { id_vacante: this.vacanteId })
       };
 
@@ -245,6 +282,9 @@ export class VacanteFormComponent implements OnInit {
           }
         );
       }
+    } else {
+      this.snackBar.open('Por favor, rellena todos los campos obligatorios.', 'Cerrar', { duration: 3000 });
+      this.vacanteForm.markAllAsTouched();
     }
   }
 
