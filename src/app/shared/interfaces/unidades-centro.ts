@@ -3,5 +3,5 @@ export interface UnidadCentro {
   unidad_centro: String;
   id_ciclo: number;
   observaciones?: String;
-  nombre_centro: String;
+  nombre_centro?:String;
 }

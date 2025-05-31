@@ -2,12 +2,14 @@ import { Component, OnInit, Inject } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
 import { VacantesService } from '../../services/vacantes.service';
-import { EntidadesService } from '../../services/entidades.service'; // <--- NUEVA IMPORTACIÓN
+import { EntidadesService } from '../../services/entidades.service';
+import { UnidadesCentroService } from 'src/app/services/unidades.centro.service';
 import { Vacante } from '../../shared/interfaces/vacante';
 import { Alumnado } from '../../shared/interfaces/alumnado';
-import { Entidad } from '../../shared/interfaces/entidad'; // <--- NUEVA IMPORTACIÓN
+import { Entidad } from '../../shared/interfaces/entidad';
+import { UnidadCentro } from '../../shared/interfaces/unidades-centro'; // <-- Importación de la interfaz de Unidad de Centro
 import { MatSnackBar } from '@angular/material/snack-bar';
-import { finalize } from 'rxjs/operators'; // <--- NUEVA IMPORTACIÓN para el indicador de carga
+import { finalize } from 'rxjs/operators';
 
 @Component({
   selector: 'app-vacante-form',
@@ -21,8 +23,11 @@ export class VacanteFormComponent implements OnInit {
   alumnosDisponiblesParaAsignar: Alumnado[] = [];
   allAlumnosFromApi: Alumnado[] = [];
 
-  entidades: Entidad[] = []; // <--- NUEVA PROPIEDAD: Lista para almacenar las entidades disponibles
-  isLoadingEntidades: boolean = false; // <--- NUEVA PROPIEDAD: Indicador de carga para entidades
+  entidades: Entidad[] = [];
+  isLoadingEntidades: boolean = false;
+
+  unidadesCentro: UnidadCentro[] = []; // <-- Propiedad para almacenar las unidades de centro
+  isLoadingUnidadesCentro: boolean = false; // <-- Indicador de carga para unidades de centro
 
   isEditMode: boolean = false;
   vacanteId?: number;
@@ -31,30 +36,33 @@ export class VacanteFormComponent implements OnInit {
   constructor(
     private fb: FormBuilder,
     private vacantesService: VacantesService,
-    private entidadesService: EntidadesService, // <--- INYECCIÓN DEL SERVICIO DE ENTIDADES
+    private entidadesService: EntidadesService,
+    private unidadesCentroService: UnidadesCentroService, // <-- Inyección del servicio de Unidades de Centro
     public dialogRef: MatDialogRef<VacanteFormComponent>,
     @Inject(MAT_DIALOG_DATA) public data: { vacante?: Vacante },
     private snackBar: MatSnackBar
   ) {
     this.vacanteForm = this.fb.group({
-      id_entidad: [null, Validators.required], // <--- CAMBIADO: Ahora es id_entidad y es numérico
-      unidad: ['', Validators.required],
-      numAlumnos: [null, [Validators.required, Validators.min(1)]],
+      id_entidad: [null, Validators.required],
+      // ELIMINADO: 'unidad'
+      id_unidad_centro: [null, Validators.required], // <-- NUEVO CAMPO: id_unidad_centro
+      num_alumnos: [null, [Validators.required, Validators.min(1)]],
     });
   }
 
   ngOnInit(): void {
-    this.loadEntidades(); // <--- NUEVA LLAMADA: Carga las entidades al iniciar el componente
+    this.loadEntidades();
+    this.loadUnidadesCentro(); // <-- Carga las unidades de centro al iniciar el componente
 
     if (this.data && this.data.vacante) {
       this.isEditMode = true;
       this.vacanteId = this.data.vacante.id_vacante;
       // PatchValue usa los nombres de los controles del formulario.
-      // Ahora el campo del formulario es 'id_entidad'.
       this.vacanteForm.patchValue({
-        id_entidad: this.data.vacante.id_entidad, // Asigna el ID de la entidad
-        unidad: this.data.vacante.unidad,
-        numAlumnos: this.data.vacante.num_alumnos
+        id_entidad: this.data.vacante.id_entidad,
+        // ELIMINADO: unidad: this.data.vacante.unidad,
+        id_unidad_centro: this.data.vacante.id_unidad_centro, // <-- Asigna el ID de la unidad de centro
+        num_alumnos: this.data.vacante.num_alumnos // El backend devuelve num_alumnos, el formulario usa num_alumnos
       });
 
       if (this.vacanteId) {
@@ -64,15 +72,14 @@ export class VacanteFormComponent implements OnInit {
     }
   }
 
-  // <--- NUEVO MÉTODO: Cargar entidades desde el servicio de entidades
   loadEntidades(): void {
-    this.isLoadingEntidades = true; // Iniciar el indicador de carga
-    this.entidadesService.get().pipe( // Llama al método get() de tu EntidadesService
-      finalize(() => this.isLoadingEntidades = false) // Detener el indicador al finalizar
+    this.isLoadingEntidades = true;
+    this.entidadesService.get().pipe(
+      finalize(() => this.isLoadingEntidades = false)
     ).subscribe(
       (response) => {
         if (response.ok && response.data) {
-          this.entidades = response.data; // Asigna los datos de las entidades
+          this.entidades = response.data;
         } else {
           this.snackBar.open(`Error al cargar entidades: ${response.message}`, 'Cerrar', { duration: 3000 });
         }
@@ -84,7 +91,26 @@ export class VacanteFormComponent implements OnInit {
     );
   }
 
-  // Carga los alumnos ya asignados a la vacante actual
+  // MÉTODO MODIFICADO: Cargar unidades de centro usando .get()
+  loadUnidadesCentro(): void {
+    this.isLoadingUnidadesCentro = true;
+    this.unidadesCentroService.get().pipe( // <-- Llamada a .get()
+      finalize(() => this.isLoadingUnidadesCentro = false)
+    ).subscribe(
+      (response) => {
+        if (response.ok && response.data) {
+          this.unidadesCentro = response.data as UnidadCentro[]; // Castear a UnidadCentro[]
+        } else {
+          this.snackBar.open(`Error al cargar unidades de centro: ${response.message}`, 'Cerrar', { duration: 3000 });
+        }
+      },
+      (error) => {
+        this.snackBar.open('Error al conectar con el servidor para cargar unidades de centro', 'Cerrar', { duration: 3000 });
+        console.error('Error cargando unidades de centro:', error);
+      }
+    );
+  }
+
   loadAlumnosAsignados(idVacante: number): void {
     this.vacantesService.getAlumnosVacante(idVacante).subscribe(
       (response) => {
@@ -108,7 +134,6 @@ export class VacanteFormComponent implements OnInit {
     );
   }
 
-  // Carga todos los alumnos del sistema desde alumnos_disponibles.php
   loadAlumnosDisponiblesApi(idVacante?: number): void {
     this.vacantesService.getAlumnosDisponibles(idVacante).subscribe(
       (response) => {
@@ -132,7 +157,6 @@ export class VacanteFormComponent implements OnInit {
     );
   }
 
-  // Filtra los alumnos que están disponibles para asignar (no están ya en la vacante actual)
   filterAvailableAlumnos(): void {
     if (this.allAlumnosFromApi && this.alumnosAsignados) {
       this.alumnosDisponiblesParaAsignar = this.allAlumnosFromApi.filter(
@@ -141,7 +165,6 @@ export class VacanteFormComponent implements OnInit {
     }
   }
 
-  // Añade el alumno seleccionado a la vacante
   addAlumno(): void {
     if (this.alumnoSeleccionadoId && this.vacanteId) {
       this.vacantesService.addAlumnoVacante(this.vacanteId, String(this.alumnoSeleccionadoId)).subscribe(
@@ -162,7 +185,6 @@ export class VacanteFormComponent implements OnInit {
     }
   }
 
-  // Elimina un alumno de la vacante
   removeAlumno(alumno: Alumnado): void {
     if (this.vacanteId && alumno.id) {
       this.vacantesService.removeAlumnoVacante(this.vacanteId, String(alumno.id)).subscribe(
@@ -182,7 +204,6 @@ export class VacanteFormComponent implements OnInit {
     }
   }
 
-  // Método auxiliar para recargar las listas de alumnos después de una operación
   private reloadAlumnosLists(): void {
     if (this.vacanteId) {
       this.loadAlumnosAsignados(this.vacanteId);
@@ -193,10 +214,17 @@ export class VacanteFormComponent implements OnInit {
   // --- Métodos de formulario principales ---
   onSubmit(): void {
     if (this.vacanteForm.valid) {
-      // Los datos del formulario ya incluyen 'id_entidad' como número
-      const vacanteData: Vacante = this.vacanteForm.value;
+      const formValue = this.vacanteForm.value;
+
+      const vacanteData: Vacante = {
+        id_entidad: formValue.id_entidad,
+        id_unidad_centro: formValue.id_unidad_centro,
+        num_alumnos: formValue.num_alumnos, // Mapeamos el nombre del campo del formulario
+        // Asegúrate de que id_vacante esté presente si es modo edición
+        ...(this.isEditMode && this.vacanteId && { id_vacante: this.vacanteId })
+      };
+
       if (this.isEditMode && this.vacanteId) {
-        vacanteData.id_vacante = this.vacanteId;
         this.vacantesService.updateVacante(vacanteData).subscribe(
           (response) => {
             this.handleFormResponse(response, 'Vacante actualizada correctamente');

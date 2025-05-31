@@ -56,7 +56,6 @@ export class UnidadesCentroService {
  this.unidadCentroSeleccionada.unidad_centro = formUnidadCentro.unidad_centro;
  this.unidadCentroSeleccionada.id_ciclo = formUnidadCentro.id_ciclo;
  this.unidadCentroSeleccionada.observaciones = formUnidadCentro.observaciones;
- this.unidadCentroSeleccionada.nombre_centro = formUnidadCentro.nombre_centro;
  }
 
  setAlumnosUnidadCentro(formUnidadCentro: any){

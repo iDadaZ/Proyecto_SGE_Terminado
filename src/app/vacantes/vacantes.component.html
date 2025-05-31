@@ -16,11 +16,11 @@
         <td mat-cell *matCellDef="let vacante"> {{vacante?.entidad}} </td>
       </ng-container>
 
-      <ng-container matColumnDef="unidad">
+      <ng-container matColumnDef="unidad_centro">
         <th mat-header-cell *matHeaderCellDef mat-sort-header>
-          <input matInput [formControl]="unidadFilter" placeholder="Unidad">
+          <input matInput [formControl]="unidadCentroFilter" placeholder="Unidad de Centro">
         </th>
-        <td mat-cell *matCellDef="let vacante"> {{vacante?.unidad}} </td>
+        <td mat-cell *matCellDef="let vacante"> {{vacante?.unidad_centro}} </td>
       </ng-container>
 
       <ng-container matColumnDef="num_alumnos">

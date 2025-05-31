@@ -8,7 +8,8 @@
         <mat-option *ngIf="isLoadingEntidades">Cargando entidades...</mat-option>
         <mat-option *ngIf="!isLoadingEntidades && entidades.length === 0" disabled>No hay entidades disponibles</mat-option>
         <mat-option *ngFor="let entidad of entidades" [value]="entidad.id_entidad">
-          {{ entidad.entidad }} </mat-option>
+          {{ entidad.entidad }}
+        </mat-option>
       </mat-select>
       <mat-error *ngIf="vacanteForm.get('id_entidad')?.hasError('required') && vacanteForm.get('id_entidad')?.touched">
         La entidad es requerida
@@ -16,9 +17,18 @@
     </mat-form-field>
 
     <mat-form-field appearance="outline">
-      <mat-label>Unidad</mat-label>
-      <input matInput formControlName="unidad" required>
-      <mat-error *ngIf="vacanteForm.get('unidad')?.hasError('required') && vacanteForm.get('unidad')?.touched">La unidad es requerida</mat-error>
+      <mat-label>Unidad de Centro</mat-label>
+      <mat-select formControlName="id_unidad_centro" required>
+        <mat-option [value]="null" disabled>-- Seleccione una unidad de centro --</mat-option>
+        <mat-option *ngIf="isLoadingUnidadesCentro">Cargando unidades de centro...</mat-option>
+        <mat-option *ngIf="!isLoadingUnidadesCentro && unidadesCentro.length === 0" disabled>No hay unidades de centro disponibles</mat-option>
+        <mat-option *ngFor="let unidad of unidadesCentro" [value]="unidad.id_unidad_centro">
+          {{ unidad.unidad_centro }}
+        </mat-option>
+      </mat-select>
+      <mat-error *ngIf="vacanteForm.get('id_unidad_centro')?.hasError('required') && vacanteForm.get('id_unidad_centro')?.touched">
+        La unidad de centro es requerida
+      </mat-error>
     </mat-form-field>
 
     <mat-form-field appearance="outline">

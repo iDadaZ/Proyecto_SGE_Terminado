@@ -17,7 +17,8 @@ export class VacantesListComponent implements OnInit {
 
   vacantes: Vacante[] = [];
   vacantesPendientes: VacantePendiente[] = [];
-  displayedColumns: string[] = ['entidad', 'unidad', 'numAlumnos', 'alumnos', 'acciones']; // Defimos las columnas de la tabla
+  // CAMBIADO: 'unidad' por 'unidad_centro' en las columnas mostradas
+  displayedColumns: string[] = ['entidad', 'unidad_centro', 'num_alumnos', 'alumnos', 'acciones']; // Usamos 'num_alumnos' directamente
 
   constructor(
     private vacantesService: VacantesService,
@@ -38,7 +39,6 @@ export class VacantesListComponent implements OnInit {
           console.log('Vacantes cargadas:', this.vacantes);
         } else {
           console.error('Error al cargar las vacantes:', response.message);
-          // Mostramos un mensaje de error de prueba
         }
       },
       (error) => {
@@ -67,7 +67,6 @@ export class VacantesListComponent implements OnInit {
     );
   }
 
-  // Métodos para editar y eliminar vacantes
   editarVacante(vacante: Vacante): void {
     const dialogRef = this.dialog.open(VacanteFormComponent, {
       width: '600px',
@@ -86,11 +85,12 @@ export class VacantesListComponent implements OnInit {
   }
 
   eliminarVacante(vacante: Vacante): void {
-    const dialogRef = this.dialog.open(MatConfirmDialogComponent, { // Utiliza tu componente de diálogo de confirmación
+    const dialogRef = this.dialog.open(MatConfirmDialogComponent, {
       width: '400px',
       data: {
         title: 'Confirmar Eliminación',
-        message: `¿Estás seguro de que deseas eliminar la vacante "${vacante.entidad} - ${vacante.unidad}"?`
+        // CAMBIADO: Usar vacante.unidad_centro en el mensaje de confirmación
+        message: `¿Estás seguro de que deseas eliminar la vacante "${vacante.entidad} - ${vacante.unidad_centro}"?`
       }
     });
 
@@ -122,15 +122,14 @@ export class VacantesListComponent implements OnInit {
     dialogRef.afterClosed().subscribe(result => {
       if (result && result.ok) {
         this.snackBar.open('Vacante creada correctamente', 'Cerrar', { duration: 3000 });
-        this.loadVacantes(); // Recargar la lista de vacantes después de crear una nueva
-        this.loadVacantesPendientes(); // Recargar el resumen de pendientes
+        this.loadVacantes();
+        this.loadVacantesPendientes();
       } else if (result && result.ok === false) {
         this.snackBar.open('La creación de la vacante fue cancelada', 'Cerrar', { duration: 3000 });
       }
     });
   }
 
-  // Método para mostrar la lista de alumnos de una vacante
   mostrarAlumnos(vacante: Vacante): string {
     if (vacante.alumnos && vacante.alumnos.length > 0) {
       return vacante.alumnos.map(alumno => `${alumno.nombre} ${alumno.apellidos}`).join(', ');
@@ -138,7 +137,11 @@ export class VacantesListComponent implements OnInit {
     return 'Sin alumnos asignados';
   }
 
-  // Método para obtener el texto resumen de vacantes pendientes por unidad
+  // MÉTODO PENDIENTES: Este método `getPendientesResumen` sigue usando `unidad` en `vacantesPendientes`.
+  // Si `vacantes_pendientes.php` aún devuelve `unidad` y no `unidad_centro` para los pendientes,
+  // deberías considerar actualizar el backend de vacantes_pendientes.php para que refleje la nueva estructura,
+  // o si no es posible, ajustar cómo se manejan los datos aquí.
+  // Por ahora, se mantiene tal cual estaba para evitar romperlo si el backend no ha cambiado.
   getPendientesResumen(unidad: string): string {
     const pendiente = this.vacantesPendientes.find(p => p.unidad === unidad);
     return pendiente ? pendiente.textoResumen : '';
