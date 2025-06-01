@@ -33,7 +33,7 @@
 
   <ng-container matColumnDef="alumnos">
     <th mat-header-cell *matHeaderCellDef> Listado Alumnos </th>
-    <td mat-cell *matCellDef="let row"> {{ mostrarAlumnos(row) }} </td>
+    <td mat-cell *matCellDef="let row"> {{ row.display_alumnos }} </td>
   </ng-container>
 
   <ng-container matColumnDef="acciones">

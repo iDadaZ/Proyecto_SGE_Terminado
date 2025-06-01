@@ -13,6 +13,19 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { finalize } from 'rxjs/operators';
 import { Subscription } from 'rxjs';
 
+import { AbstractControl, ValidatorFn } from '@angular/forms';
+
+// Validador personalizado
+export function minCapacityValidator(currentStudents: number): ValidatorFn {
+  return (control: AbstractControl): { [key: string]: any } | null => {
+    const numAlumnos = control.value;
+    if (numAlumnos !== null && numAlumnos < currentStudents) {
+      return { 'minCapacity': { requiredCapacity: currentStudents, actualCapacity: numAlumnos } };
+    }
+    return null;
+  };
+}
+
 @Component({
   selector: 'app-vacante-form',
   templateUrl: './vacante-form.component.html',
@@ -35,6 +48,8 @@ export class VacanteFormComponent implements OnInit, OnDestroy {
   vacanteId?: number;
   alumnoSeleccionadoId?: number;
 
+  currentStudentsCount: number = 0;
+
   private formSubscription: Subscription = new Subscription();
 
   constructor(
@@ -47,10 +62,14 @@ export class VacanteFormComponent implements OnInit, OnDestroy {
     @Inject(MAT_DIALOG_DATA) public data: { vacante?: Vacante },
     private snackBar: MatSnackBar
   ) {
+
+    const initialCurrentStudentsCount = this.data?.vacante?.current_students_count || 0;
+    this.currentStudentsCount = initialCurrentStudentsCount;
+
     this.vacanteForm = this.fb.group({
       id_entidad: [null, Validators.required],
       id_unidad_centro: [null, Validators.required],
-      num_alumnos: [null, [Validators.required, Validators.min(1)]],
+      num_alumnos: [null, [Validators.required, Validators.min(1), minCapacityValidator(this.currentStudentsCount)]],
     });
   }
 
@@ -66,6 +85,8 @@ export class VacanteFormComponent implements OnInit, OnDestroy {
         id_unidad_centro: this.data.vacante.id_unidad_centro,
         num_alumnos: this.data.vacante.num_alumnos
       });
+
+      this.currentStudentsCount = this.data.vacante.current_students_count || 0;
 
       if (this.vacanteId) {
         this.loadAlumnosAsignados(this.vacanteId);

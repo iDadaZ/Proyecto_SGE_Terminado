@@ -45,7 +45,7 @@ export class EditAlumnoComponent implements OnInit {
       nivel_ingles: new FormControl(this.alumno.nivel_ingles),
       minusvalia: new FormControl(this.alumno.minusvalia, [Validators.min(0), Validators.max(100)]),
       otra_formacion: new FormControl(this.alumno.otra_formacion, Validators.maxLength(500)),
-      id_unidad_centro: new FormControl(this.alumno.idUnidadCentro, Validators.maxLength(20))
+      id_unidad_centro: new FormControl(this.alumno.id_unidad_centro, Validators.maxLength(20))
     });
     this.alumnado = ALUMNO;
   }
@@ -74,7 +74,7 @@ export class EditAlumnoComponent implements OnInit {
             nivel_ingles: formValues.nivel_ingles,
             minusvalia: formValues.minusvalia,
             otra_formacion: formValues.otra_formacion,
-            idUnidadCentro: this.alumnoForm.get('id_unidad_centro')?.value
+            id_unidad_centro: this.alumnoForm.get('id_unidad_centro')?.value
           };
 
           //alumado.id_Unidad_Centro = unidadCentro.idUnidadCentro
